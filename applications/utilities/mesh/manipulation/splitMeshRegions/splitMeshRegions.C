@@ -271,8 +271,8 @@ void addToInterface
 {
     edge interface
     (
-        min(ownRegion, neiRegion),
-        max(ownRegion, neiRegion)
+        Foam::min(ownRegion, neiRegion),
+        Foam::max(ownRegion, neiRegion)
     );
 
     auto iter = regionsToSize.find(interface);
@@ -529,8 +529,8 @@ void getInterfaceSizes
 
             edge interface
             (
-                min(ownRegion, neiRegion),
-                max(ownRegion, neiRegion)
+                Foam::min(ownRegion, neiRegion),
+                Foam::max(ownRegion, neiRegion)
             );
 
             faceToInterface[facei] = regionsToInterface[interface][zoneID];
@@ -552,8 +552,8 @@ void getInterfaceSizes
 
             edge interface
             (
-                min(ownRegion, neiRegion),
-                max(ownRegion, neiRegion)
+                Foam::min(ownRegion, neiRegion),
+                Foam::max(ownRegion, neiRegion)
             );
 
             faceToInterface[facei] = regionsToInterface[interface][zoneID];
