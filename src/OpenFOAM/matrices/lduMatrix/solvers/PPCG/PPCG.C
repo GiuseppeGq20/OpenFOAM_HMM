@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2019-2020 Mattijs Janssens
     Copyright (C) 2020-2023 OpenCFD Ltd.
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,6 +29,14 @@ License
 
 #include "PPCG.H"
 #include "PrecisionAdaptor.H"
+
+#ifdef USE_OMP
+#include <omp.h>
+    #ifndef OMP_UNIFIED_MEMORY_REQUIRED
+    #define OMP_UNIFIED_MEMORY_REQUIRED
+    #pragma omp requires unified_shared_memory
+    #endif
+#endif
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -56,6 +65,9 @@ void Foam::PPCG::gSumMagProd
     const label nCells = a.size();
 
     globalSum = 0.0;
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>20000)
+#endif
     for (label cell=0; cell<nCells; ++cell)
     {
         globalSum[0] += a[cell]*b[cell];    // sumProd(a, b)
@@ -207,7 +219,10 @@ Foam::solverPerformance Foam::PPCG::scalarSolveCG
         {
             const solveScalar beta = gamma/gammaOld;
             alpha = gamma/(delta-beta*gamma/alpha);
-
+            
+        #ifdef USE_OMP
+            #pragma omp target teams distribute parallel for if (target:nCells>20000)
+        #endif
             for (label cell=0; cell<nCells; ++cell)
             {
                 z[cell] = n[cell] + beta*z[cell];
@@ -217,6 +232,9 @@ Foam::solverPerformance Foam::PPCG::scalarSolveCG
             }
         }
 
+    #ifdef USE_OMP
+        #pragma omp target teams distribute parallel for if (target:nCells>20000)
+    #endif
         for (label cell=0; cell<nCells; ++cell)
         {
             psi[cell] += alpha*p[cell];

@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
     Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,6 +29,14 @@ License
 
 #include "PBiCG.H"
 #include "PrecisionAdaptor.H"
+
+#ifdef USE_OMP
+#include <omp.h>
+    #ifndef OMP_UNIFIED_MEMORY_REQUIRED
+    #define OMP_UNIFIED_MEMORY_REQUIRED
+    #pragma omp requires unified_shared_memory
+    #endif
+#endif
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -170,6 +179,9 @@ Foam::solverPerformance Foam::PBiCG::solve
 
             if (solverPerf.nIterations() == 0)
             {
+            #ifdef USE_OMP
+                #pragma omp target teams distribute parallel for if (target:nCells>20000)
+            #endif
                 for (label cell=0; cell<nCells; cell++)
                 {
                     pAPtr[cell] = wAPtr[cell];
@@ -180,6 +192,9 @@ Foam::solverPerformance Foam::PBiCG::solve
             {
                 const solveScalar beta = wArT/wArTold;
 
+            #ifdef USE_OMP
+                #pragma omp target teams distribute parallel for if (target:nCells>20000)
+            #endif
                 for (label cell=0; cell<nCells; cell++)
                 {
                     pAPtr[cell] = wAPtr[cell] + beta*pAPtr[cell];
@@ -204,7 +219,10 @@ Foam::solverPerformance Foam::PBiCG::solve
             // --- Update solution and residual:
 
             const solveScalar alpha = wArT/wApT;
-
+            
+        #ifdef USE_OMP
+            #pragma omp target teams distribute parallel for if (target:nCells>20000)
+        #endif
             for (label cell=0; cell<nCells; cell++)
             {
                 psiPtr[cell] += alpha*pAPtr[cell];
