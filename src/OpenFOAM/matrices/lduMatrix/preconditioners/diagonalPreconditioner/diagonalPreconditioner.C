@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,6 +27,14 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "diagonalPreconditioner.H"
+
+#ifdef USE_OMP
+#include <omp.h>
+    #ifndef OMP_UNIFIED_MEMORY_REQUIRED
+    #define OMP_UNIFIED_MEMORY_REQUIRED
+    #pragma omp requires unified_shared_memory
+    #endif
+#endif
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -60,6 +69,9 @@ Foam::diagonalPreconditioner::diagonalPreconditioner
     const label nCells = rD.size();
 
     // Generate reciprocal diagonal
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>20000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         rDPtr[cell] = 1.0/DPtr[cell];
@@ -82,6 +94,9 @@ void Foam::diagonalPreconditioner::precondition
 
     const label nCells = wA.size();
 
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>20000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         wAPtr[cell] = rDPtr[cell]*rAPtr[cell];

@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
     Copyright (C) 2019 OpenCFD Ltd.
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,6 +29,14 @@ License
 
 #include "DILUPreconditioner.H"
 #include <algorithm>
+
+#ifdef USE_OMP
+#include <omp.h>
+    #ifndef OMP_UNIFIED_MEMORY_REQUIRED
+    #define OMP_UNIFIED_MEMORY_REQUIRED
+    #pragma omp requires unified_shared_memory
+    #endif
+#endif
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -85,6 +94,9 @@ void Foam::DILUPreconditioner::calcReciprocalD
     // Calculate the reciprocal of the preconditioned diagonal
     const label nCells = rD.size();
 
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>20000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         rDPtr[cell] = 1.0/rDPtr[cell];
@@ -119,6 +131,9 @@ void Foam::DILUPreconditioner::precondition
     const label nFaces = solver_.matrix().upper().size();
     const label nFacesM1 = nFaces - 1;
 
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>20000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         wAPtr[cell] = rDPtr[cell]*rAPtr[cell];
@@ -166,6 +181,9 @@ void Foam::DILUPreconditioner::preconditionT
     const label nFaces = solver_.matrix().upper().size();
     const label nFacesM1 = nFaces - 1;
 
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>20000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         wTPtr[cell] = rDPtr[cell]*rTPtr[cell];
