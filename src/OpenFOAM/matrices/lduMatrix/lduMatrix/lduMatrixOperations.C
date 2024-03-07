@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2019 OpenCFD Ltd.
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,6 +31,14 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "lduMatrix.H"
+
+#ifdef USE_OMP
+#include <omp.h>
+    #ifndef OMP_UNIFIED_MEMORY_REQUIRED
+    #define OMP_UNIFIED_MEMORY_REQUIRED
+    #pragma omp requires unified_shared_memory
+    #endif
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -316,12 +325,20 @@ void Foam::lduMatrix::operator*=(const scalarField& sf)
         const labelUList& l = lduAddr().lowerAddr();
         const labelUList& u = lduAddr().upperAddr();
 
-        for (label face=0; face<upper.size(); face++)
+        const label nFacesU = upper.size();
+    #ifdef USE_OMP
+        #pragma omp target teams distribute parallel for if (target:nFacesU>10000)
+    #endif
+        for (label face=0; face<nFacesU; face++)
         {
             upper[face] *= sf[l[face]];
         }
 
-        for (label face=0; face<lower.size(); face++)
+        const label nFacesL = lower.size();
+    #ifdef USE_OMP
+        #pragma omp target teams distribute parallel for if (target:nFacesL>10000)
+    #endif
+        for (label face=0; face<nFacesL; face++)
         {
             lower[face] *= sf[u[face]];
         }

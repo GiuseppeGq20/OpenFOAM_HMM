@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2017-2019 OpenCFD Ltd.
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,6 +32,14 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "lduMatrix.H"
+
+#ifdef USE_OMP
+#include <omp.h>
+    #ifndef OMP_UNIFIED_MEMORY_REQUIRED
+    #define OMP_UNIFIED_MEMORY_REQUIRED
+    #pragma omp requires unified_shared_memory
+    #endif
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -70,6 +79,9 @@ void Foam::lduMatrix::Amul
     );
 
     const label nCells = diag().size();
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>10000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         ApsiPtr[cell] = diagPtr[cell]*psiPtr[cell];
@@ -136,6 +148,9 @@ void Foam::lduMatrix::Tmul
     );
 
     const label nCells = diag().size();
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>10000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         TpsiPtr[cell] = diagPtr[cell]*psiPtr[cell];
@@ -184,6 +199,9 @@ void Foam::lduMatrix::sumA
     const label nCells = diag().size();
     const label nFaces = upper().size();
 
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>10000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         sumAPtr[cell] = diagPtr[cell];
@@ -260,6 +278,9 @@ void Foam::lduMatrix::residual
     );
 
     const label nCells = diag().size();
+#ifdef USE_OMP
+    #pragma omp target teams distribute parallel for if (target:nCells>10000)
+#endif
     for (label cell=0; cell<nCells; cell++)
     {
         rAPtr[cell] = sourcePtr[cell] - diagPtr[cell]*psiPtr[cell];

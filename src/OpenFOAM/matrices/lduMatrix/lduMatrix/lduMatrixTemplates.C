@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,6 +30,14 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "lduMatrix.H"
+
+#ifdef USE_OMP
+#include <omp.h>
+    #ifndef OMP_UNIFIED_MEMORY_REQUIRED
+    #define OMP_UNIFIED_MEMORY_REQUIRED
+    #pragma omp requires unified_shared_memory
+    #endif
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -86,7 +95,11 @@ Foam::lduMatrix::faceH(const Field<Type>& psi) const
         auto tfaceHpsi = tmp<Field<Type>>::New(Lower.size());
         auto& faceHpsi = tfaceHpsi.ref();
 
-        for (label face=0; face<l.size(); face++)
+        const label nFaces = l.size();
+    #ifdef USE_OMP
+        #pragma omp target teams distribute parallel for if (target:nFaces>10000)
+    #endif
+        for (label face=0; face<nFaces; face++)
         {
             faceHpsi[face] =
                 Upper[face]*psi[u[face]]
