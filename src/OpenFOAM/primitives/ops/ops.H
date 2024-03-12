@@ -7,6 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
     Copyright (C) 2018-2023 OpenCFD Ltd.
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,6 +39,15 @@ Description
 #define Foam_ops_H
 
 #include "stdFoam.H"    // For FOAM_NODISCARD
+#include "macros.H"     // For OMP(X)
+
+#ifdef USE_OMP
+#include <omp.h>
+    #ifndef OMP_UNIFIED_MEMORY_REQUIRED
+    #define OMP_UNIFIED_MEMORY_REQUIRED
+    #pragma omp requires unified_shared_memory
+    #endif
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -97,6 +107,44 @@ EqOp(nopEq, (void)x)
 
 #undef EqOp
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Atomic operation taking two parameters with atomic clause and returning void.
+// Atomically alters the value of the first parameter.
+//     Eg, plusEqOp for (x += y)
+
+#define AtomicEqOp(opName, op, atomicClause)                                   \
+                                                                               \
+    template<class T1, class T2>                                               \
+    struct atomic##opName##Op2                                                 \
+    {                                                                          \
+        void operator()(T1& x, const T2& y) const                              \
+        {                                                                      \
+            OMP(atomic atomicClause)                                           \
+            op;                                                                \
+        }                                                                      \
+    };                                                                         \
+                                                                               \
+    template<class T>                                                          \
+    struct atomic##opName##Op                                                  \
+    {                                                                          \
+        void operator()(T& x, const T& y) const                                \
+        {                                                                      \
+            OMP(atomic atomicClause)                                           \
+            op;                                                                \
+        }                                                                      \
+    };
+
+AtomicEqOp(Eq,         x = y,  write)
+AtomicEqOp(PlusEq,     x += y, update)
+AtomicEqOp(MinusEq,    x -= y, update)
+AtomicEqOp(MultiplyEq, x *= y, update)
+AtomicEqOp(DivideEq,   x /= y, update)
+AtomicEqOp(BitAndEq,   x &= y, update)
+AtomicEqOp(BitOrEq,    x |= y, update)
+AtomicEqOp(BitXorEq,   x ^= y, update)
+
+#undef AtomicEqOp
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
