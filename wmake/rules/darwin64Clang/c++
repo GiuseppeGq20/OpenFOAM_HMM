@@ -1,9 +1,15 @@
 #------------------------------------------------------------------------------
 include $(GENERAL_RULES)/Clang/c++
 
-c++ARCH     = -m64 -pthread -ftrapping-math
+ifneq (,$(findstring +xcrun,$(WM_COMPILE_CONTROL)))
+CC         := xcrun c++ -std=c++14
+endif
 
-include $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
+c++ARCH    := -m64 -pthread -ftrapping-math
+
+ifneq (,$(strip $(WM_COMPILE_OPTION)))
+    sinclude $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
+endif
 
 c++FLAGS    = \
     $(c++ARCH) $(GFLAGS) $(c++WARN) $(c++OPT) $(c++DBUG) $(ptFLAGS) \
@@ -14,10 +20,16 @@ cctoo       = $(Ctoo)
 cpptoo      = $(Ctoo)
 cxxtoo      = $(Ctoo)
 
-LINK_LIBS   = $(c++DBUG)
 
-LINKLIBSO   = $(CC) $(c++FLAGS) -Wl,-dylib,-undefined,dynamic_lookup
+# Linking:
+# with or without rpath components on MacOS
+# - current default is with rpath unless explicitly disabled
 
-LINKEXE     = $(CC) $(c++FLAGS) -Wl,-execute,-undefined,dynamic_lookup
+ifneq (,$(findstring ~rpath,$(WM_COMPILE_CONTROL)))
+    include $(DEFAULT_RULES)/link-c++
+
+else
+    include $(DEFAULT_RULES)/link-rpath-c++
+endif
 
 #------------------------------------------------------------------------------

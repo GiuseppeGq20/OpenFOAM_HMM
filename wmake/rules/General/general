@@ -1,5 +1,5 @@
 #-------------------------------*- makefile -*---------------------------------
-WM_VERSION = OPENFOAM=2206
+WM_VERSION = OPENFOAM=2312
 
 AR         = ar
 ARFLAGS    = cr
@@ -32,9 +32,14 @@ else
     COMPILER_VERSION :=
 endif
 
+# Enable additional compile-time checks
+ifneq (,$(findstring +strict,$(WM_COMPILE_CONTROL)))
+    GFLAGS += -DFOAM_COMPILE_STRICT
+endif
+
 # Default compilation is 'Opt' - never permit an empty value
-ifeq (,$(WM_COMPILE_OPTION))
-    WM_COMPILE_OPTION = Opt
+ifeq (,$(strip $(WM_COMPILE_OPTION)))
+    WM_COMPILE_OPTION := Opt
 endif
 
 # Older macro for (shell) branching
@@ -46,6 +51,16 @@ ifneq ("$(COMPILER_FAMILY)","$(WM_COMPILER)")
 sinclude $(RULES)/general
 sinclude $(RULES)/c++
 endif
+
+# Compile flags for openmp
+# - if enabled (+openmp) and not disabled (~openmp).
+# - disable has higher precedence
+ifeq  (,$(findstring ~openmp,$(WM_COMPILE_CONTROL)))
+ifneq (,$(findstring +openmp,$(WM_COMPILE_CONTROL)))
+    c++FLAGS  += $(COMP_OPENMP)
+endif
+endif
+
 include $(GENERAL_RULES)/transform
 
 #------------------------------------------------------------------------------
