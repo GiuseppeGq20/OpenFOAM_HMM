@@ -13,4 +13,6 @@ ifneq ($(WM_OMP_OFFLOAD_ARCH),)
 
 endif
 
+#specific to openfoam_hmm
+COMP_OPENMP += -DUSE_OMP
 # ----------------------------------------------------------------------------

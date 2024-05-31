@@ -6,7 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2011-2016 OpenFOAM Foundation
-#     Copyright (C) 2016-2022 OpenCFD Ltd.
+#     Copyright (C) 2016-2023 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -68,8 +68,7 @@ export WM_COMPILER_TYPE=system
 # [WM_COMPILER] - Compiler:
 # = Gcc | Clang | Icc | Icx | Amd | Arm | Cray | Fujitsu | Nvidia |
 #   Gcc<digits> | Clang<digits>
-#   [Not well tested: Pgi | Nvidia]
-export WM_COMPILER=Clang
+export WM_COMPILER=Gcc
 
 # [WM_PRECISION_OPTION] - Floating-point precision:
 # = DP | SP | SPDP
@@ -80,16 +79,26 @@ export WM_PRECISION_OPTION=DP
 export WM_LABEL_SIZE=32
 
 # [WM_COMPILE_OPTION] - Optimised(default), debug, profiling, other:
-# = Opt | Debug | Prof
+# = Opt | Dbg | Debug | Prof
 export WM_COMPILE_OPTION=Opt
 
-# [WM_COMPILE_CONTROL] - additional control for compiler rules
-#   +gold   : with gold linker
-#   +lld    : with  lld linker (with clang)
-#   +mold   : with mold linker (with clang)
+# [WM_COMPILE_CONTROL] - additional control for compilation/linking
+#   +gold   : use gold linker
+#   +link-ld: use   ld linker [clang]
+#   +lld    : use  lld linker [clang]
+#   +mold   : use mold linker [clang]
+#   ~libz   : without libz compression
+#   ~rpath  : without rpath handling [MacOS]
+#   +openmp : with openmp
+#             for clang optional add offload arch, i.e for amd MI300A +openmp:gfx942
 #   ~openmp : without openmp
-#   version=... : compiler suffix (eg, "11" for gcc-11)
-#export WM_COMPILE_CONTROL="+gold"
+#   +ccache : use ccache
+#   +xcrun  : use xcrun and native compilers [MacOS]
+#   +strict : more deprecation warnings (may generate *many* warnings)
+#   ccache=... : ccache command (unquoted, single/double or <> quoted)
+#   version=... : compiler suffix (eg, version=11 -> gcc-11)
+#export WM_COMPILE_CONTROL="+strict"
+#export WM_COMPILE_CONTROL="+openmp:gfx942 +link-ld"
 
 # [WM_MPLIB] - MPI implementation:
 # = SYSTEMOPENMPI | OPENMPI | SYSTEMMPI | MPI | MPICH | MPICH-GM |
