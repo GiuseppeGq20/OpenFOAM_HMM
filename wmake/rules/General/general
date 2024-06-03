@@ -58,7 +58,6 @@ endif
 ifeq  (,$(findstring ~openmp,$(WM_COMPILE_CONTROL)))
 ifneq (,$(findstring +openmp,$(WM_COMPILE_CONTROL)))
     c++FLAGS  += $(COMP_OPENMP)
-    cFLAGS  += $(COMP_OPENMP)
 endif
 endif
 
